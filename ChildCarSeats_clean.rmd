@@ -1,0 +1,286 @@
+---
+title: "Diferencia Medias 07.01.2022"
+author: "Luca Bettini"
+date: "4/1/2022"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+* * * * * * * * * *
+
+# Import libraries  
+- library(dplyr)  
+- library(plyr)  
+- library(car)  
+- library(nortest)  
+
+```{r import, include=FALSE}
+library(dplyr)
+library(plyr)
+library(car)
+library(nortest)
+```
+
+# Import database ChildCarSeats_clean.csv
+- ChildCarSeats_clean <- read.csv("ChildCarSeats_clean.csv", stringsAsFactors = TRUE)
+
+```{r read, include=FALSE}
+ChildCarSeats_clean <- read.csv("ChildCarSeats_clean.csv", stringsAsFactors = TRUE)
+```
+
+# DataBase first inspection
+- str(ChildCarSeats_clean)
+- summary(ChildCarSeats_clean)
+
+```{r str, echo=TRUE}
+str(ChildCarSeats_clean)
+```
+
+```{r summary, echo=TRUE}
+summary(ChildCarSeats_clean)
+```
+
+# 1) Study variable Sales with US
+  
+Create 2 datasets settings (US_IN = 258 lines, US_OUT = 142 lines):  
+- US_IN<-ChildCarSeats_clean %>% filter(US=="Yes")  
+- US_OUT<-ChildCarSeats_clean %>% filter(US=="No")  
+
+```{r varUS, include=FALSE}
+#2 datasets settings
+US_IN<-ChildCarSeats_clean %>%
+  filter(US=="Yes")
+US_OUT<-ChildCarSeats_clean %>%
+  filter(US=="No")
+US_IN
+US_OUT
+```
+US_IN and US_OUT are datasets not paired. 
+  
+## 1.1) Study US_IN normality
+
+```{r norm_US_IN, include=TRUE, echo=TRUE}
+qqPlot(US_IN$Sales)
+hist(US_IN$Sales)
+###############################
+shapiro.test(US_IN$Sales)
+###############################
+lillie.test(US_IN$Sales)
+```
+Both lillie (0.5236) and shapiro (0.6499) tests p_value are high so US_IN normal.  
+
+## 1.2) Study US_OUT normality
+
+```{r norm_US_OUT, include=TRUE, echo=TRUE}
+qqPlot(US_OUT$Sales)
+hist(US_OUT$Sales)
+###############################
+shapiro.test(US_OUT$Sales)
+###############################
+lillie.test(US_OUT$Sales)
+```
+Both lillie (0.1762) and shapiro (0.2181) tests p_value are high so US_OUT normal.  
+  
+## 1.3) Double check US with ddply, in order to confirm normality  
+  
+```{r norm_US_ddply, include=TRUE, echo=TRUE}
+ddply(ChildCarSeats_clean,"US",summarise,normality_test = lillie.test(Sales))
+```
+The two p-values (0.5235926, 0.1761735) are the same as previous lillie test in singles datasets study; p-value are high so US normality is confirmed. 
+  
+## 1.4) Compare US_IN and US_OUT variances  
+
+```{r var_US_INOUT, include=TRUE, echo=TRUE}
+var.test(US_IN$Sales,US_OUT$Sales)
+```
+P-value (0.0008679) is low so variances are not equals
+  
+## 1.5) US t.test with var.equal = FALSE 
+  Both US_IN and US_OUT are normal so we can perform t.test with var.equal = FALSE.
+
+```{r t.test_US_INOUT_G, include=TRUE, echo=TRUE}
+t.test(US_IN$Sales, US_OUT$Sales, paired = F ,var.equal = F, alternative = "greater")
+```
+Risk (that is p-value = 5.208e-07) to say US_IN are greater than US_OUT is lower than 5%.  
+**Conclusion is US_IN sales are greater than US_OUT sales.**  
+  
+# 2) Study variable Sales with Urban 
+  
+Create 2 datasets settings URBAN_YES = 282 lines, URBAN_NO = 118 lines)  
+- URBAN_YES<-ChildCarSeats_clean %>% filter(Urban=="Yes")  
+- URBAN_NO<-ChildCarSeats_clean %>% filter(Urban=="No")  
+
+```{r varURBAN, include=FALSE}
+#2 datasets settings
+URBAN_YES<-ChildCarSeats_clean %>%
+  filter(Urban=="Yes")
+URBAN_NO<-ChildCarSeats_clean %>%
+  filter(Urban=="No")
+URBAN_YES
+URBAN_NO
+
+```
+URBAN_YES and URBAN_OUT are datasets not paired.  
+  
+## 2.1) Study URBAN_YES normality
+
+```{r norm_URBAN_YES, include=TRUE, echo=TRUE}
+qqPlot(URBAN_YES$Sales)
+hist(URBAN_YES$Sales)
+###############################
+shapiro.test(URBAN_YES$Sales)
+###############################
+lillie.test(URBAN_YES$Sales)
+
+```
+
+Both lillie (0.2984) and shapiro (0.2993) tests p_value are high so URBAN_YES normal.  
+  
+## 2.2) Study URBAN_NO normality
+
+```{r norm_URBAN_NO, include=TRUE, echo=TRUE}
+qqPlot(URBAN_NO$Sales)
+hist(URBAN_NO$Sales)
+###############################
+shapiro.test(URBAN_NO$Sales)
+###############################
+lillie.test(URBAN_NO$Sales)
+```
+
+Both lillie (0.7297) and shapiro (0.6306) tests p_value are high so URBAN_NO normal.  
+  
+## 2.3) Double check URBAN with ddply, in order to confirm normality  
+
+```{r var_URBAN_ddply, include=TRUE, echo=TRUE}
+ddply(ChildCarSeats_clean,"Urban",summarise,normality_test = lillie.test(Sales))
+```
+The two p-values (0.2984125, 0.7297145) are the same as previous lillie test in singles datasets study; p-value are high so URBAN normality is confirmed.   
+  
+## 2.4) Compare URBAN_YES and URBAN_NO variances  
+
+```{r var_URBAN_YESNO, include=TRUE, echo=TRUE}
+var.test(URBAN_YES$Sales,URBAN_NO$Sales)
+```
+P-value (0.9545) is high so variances are equals.  
+  
+## 2.5.1) URBAN t.test with var.equal = TRUE and greater
+  Both URBAN_YES and URBAN_NO are normal so we can perform t.test with var.equal = TRUE and greater
+
+```{r t.test_URBAN_YESNO_G, include=TRUE, echo=TRUE}
+t.test(URBAN_YES$Sales, URBAN_NO$Sales, paired = F ,var.equal = T, alternative = "greater")
+```
+Risk (that is p-value = 0.6805) to say Sales of URBAN_YES are greater than Sales of URBAN_NO is 68.05%, so risk is higher than 5%.  
+**Conclusion: based on 5% rule, we should refuse URBAN_YES Sales is greater than URBAN_NO.**  
+
+## 2.5.2) URBAN t.test with var.equal = TRUE and less
+  Both URBAN_YES and URBAN_NO are normal so we can perform t.test with var.equal = TRUE and less
+
+```{r t.test_URBAN_YESNO_L, include=TRUE, echo=TRUE}
+t.test(URBAN_YES$Sales, URBAN_NO$Sales, paired = F ,var.equal = T, alternative = "less")
+```
+Risk (that is p-value = 0.3195) to say Sales of URBAN_YES are less than Sales of URBAN_NO is 31.95%, so risk is higher than 5%.  
+**Conclusion: based on 5% rule, we should refuse URBAN_YES Sales is less than URBAN_NO.**  
+  
+## 2.5.3) URBAN t.test with var.equal = TRUE and two.sided
+  Both URBAN_YES and URBAN_NO are normal so we can perform t.test with var.equal = TRUE and two.sided
+
+```{r t.test_URBAN_YESNO_TS, include=TRUE, echo=TRUE}
+t.test(URBAN_YES$Sales, URBAN_NO$Sales, paired = F ,var.equal = T, alternative = "two.sided")
+t.test(URBAN_NO$Sales, URBAN_YES$Sales, paired = F ,var.equal = T, alternative = "two.sided")
+```
+Risk (that is p-value =  0.639) to say Sales of URBAN_YES and URBAN_NO are two sided is 63.9%, so risk is higher than 5%.  
+**Conclusion: based on 5% rule, we should refuse Sales of URBAN_YES and URBAN_NO are two sided.**  
+  
+# 3) Study variable Sales with ShelveLoc
+  
+Create 3 datasets settings SHELVELOC_GOOD = 85 lines, SHELVELOC_MEDIUM = 219 lines, SHELVELOC_BAD = 96 lines)  
+- SHELVELOC_GOOD<-ChildCarSeats_clean %>% filter(ShelveLoc=="Good")  
+- SHELVELOC_MEDIUM<-ChildCarSeats_clean %>% filter(ShelveLoc=="Medium")  
+- SHELVELOC_BAD<-ChildCarSeats_clean %>% filter(ShelveLoc=="Bad")  
+
+```{r varShelveLoc, include=FALSE}
+
+#3 datasets settings
+SHELVELOC_GOOD<-ChildCarSeats_clean %>%
+  filter(ShelveLoc=="Good")
+SHELVELOC_MEDIUM<-ChildCarSeats_clean %>%
+  filter(ShelveLoc=="Medium")
+SHELVELOC_BAD<-ChildCarSeats_clean %>%
+  filter(ShelveLoc=="Bad")
+SHELVELOC_GOOD
+SHELVELOC_MEDIUM
+SHELVELOC_BAD
+
+```
+SHELVELOC_GOOD and SHELVELOC_MEDIUM and SHELVELOC_BAD are datasets not paired.  
+  
+## 3.1) Study SHELVELOC_GOOD normality
+  
+```{r norm_SHELVELOC_GOOD, include=TRUE, echo=TRUE}
+qqPlot(SHELVELOC_GOOD$Sales)
+hist(SHELVELOC_GOOD$Sales)
+###############################
+shapiro.test(SHELVELOC_GOOD$Sales)
+###############################
+lillie.test(SHELVELOC_GOOD$Sales)
+```
+Both lillie (0.7634) and shapiro (0.8411) tests p_value are high so URBAN_NO normal. 
+  
+## 3.2) Study SHELVELOC_MEDIUM normality
+  
+```{r norm_SHELVELOC_MEDIUM, include=TRUE, echo=TRUE}
+qqPlot(SHELVELOC_MEDIUM$Sales)
+hist(SHELVELOC_MEDIUM$Sales)
+shapiro.test(SHELVELOC_MEDIUM$Sales)  
+###############################
+lillie.test(SHELVELOC_MEDIUM$Sales)
+```
+Both lillie (0.633) and shapiro (0.3139) tests p_value are high so URBAN_NO normal.  
+  
+## 3.3) Study SHELVELOC_BAD normality
+  
+```{r norm_SHELVELOC_BAD, include=TRUE, echo=TRUE}
+qqPlot(SHELVELOC_BAD$Sales)
+hist(SHELVELOC_BAD$Sales)
+###############################
+shapiro.test(SHELVELOC_BAD$Sales)  
+###############################
+lillie.test(SHELVELOC_BAD$Sales)
+```
+Both lillie (0.1374) and shapiro (0.6066) tests p_value are high so URBAN_NO normal.  
+  
+## 3.4) Double check SHELVELOC with ddply, in order to confirm normality  
+
+```{r var_SHELVELOC_GMB, include=TRUE, echo=TRUE}
+ddply(ChildCarSeats_clean,"ShelveLoc",summarise,normality_test = lillie.test(Sales))
+```
+Three p-values (0.1374479, 0.7634104, 0.6329789) are the same as previous lillie test in singles datasets study; p-value are high so normality is confirmed.  
+  
+## 3.5) Homoscedasticity of SHELVELOC  
+```{r var_SHELVELOC_HOMOSC, include=TRUE, echo=TRUE}
+bartlett.test(Sales ~ ShelveLoc, data=ChildCarSeats_clean)
+```
+The result p-value (0.7042) is high so we do not discard equality if variances
+
+## 3.6) Perform ANOVA TEST
+```{r var_SHELVELOC_ANOVA, include=TRUE, echo=TRUE}
+Result_Anova=aov(Sales ~ ShelveLoc, data=ChildCarSeats_clean)
+summary(Result_Anova)
+```
+The result p-value (< 2e-16) is low so three means are different
+
+## 3.7) Perform POST HOC TEST (what means are different in between)
+```{r var_SHELVELOC_POSTHOC, include=TRUE, echo=TRUE}
+TukeyHSD(Result_Anova)
+```
+The result p-value (0) is low for all cases, three means are different in between
+
+
+
